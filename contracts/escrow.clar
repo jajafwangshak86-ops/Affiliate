@@ -13,6 +13,9 @@
 (define-constant ERR-CAMPAIGN-NOT-FOUND (err u102))
 (define-constant ERR-ESCROW-BELOW-FLOOR (err u103))
 (define-constant ERR-CAMPAIGN-PAUSED (err u104))
+(define-constant ERR-CAMPAIGN-ALREADY-ACTIVE (err u105))
+(define-constant ERR-CAMPAIGN-ALREADY-PAUSED (err u106))
+(define-constant ERR-INSUFFICIENT-BALANCE (err u107))
 
 (define-constant MIN-ESCROW-FLOOR u1000000) ;; 1 USDC (6 decimals)
 
@@ -32,15 +35,21 @@
   }
 )
 
-(define-map merchant-campaigns
-  { merchant: principal }
-  { campaign-ids: (list 50 uint) }
-)
-
 ;; ===== Read-Only =====
 
 (define-read-only (get-campaign (campaign-id uint))
   (map-get? campaigns { campaign-id: campaign-id })
+)
+
+(define-read-only (get-next-campaign-id)
+  (var-get next-campaign-id)
+)
+
+(define-read-only (get-commission-rate (campaign-id uint))
+  (match (map-get? campaigns { campaign-id: campaign-id })
+    campaign (ok (get commission-rate campaign))
+    ERR-CAMPAIGN-NOT-FOUND
+  )
 )
 
 (define-read-only (get-escrow-balance (campaign-id uint))
@@ -108,11 +117,43 @@
   )
 )
 
+;; Update escrow floor for a campaign
+(define-public (update-escrow-floor (campaign-id uint) (new-floor uint))
+  (let ((campaign (unwrap! (map-get? campaigns { campaign-id: campaign-id }) ERR-CAMPAIGN-NOT-FOUND)))
+    (asserts! (is-eq tx-sender (get merchant campaign)) ERR-NOT-AUTHORIZED)
+    (asserts! (>= new-floor MIN-ESCROW-FLOOR) ERR-INSUFFICIENT-AMOUNT)
+    (map-set campaigns { campaign-id: campaign-id } (merge campaign { escrow-floor: new-floor }))
+    (ok true)
+  )
+)
+
+;; Pause an active campaign (merchant only)
+(define-public (pause-campaign (campaign-id uint))
+  (let ((campaign (unwrap! (map-get? campaigns { campaign-id: campaign-id }) ERR-CAMPAIGN-NOT-FOUND)))
+    (asserts! (is-eq tx-sender (get merchant campaign)) ERR-NOT-AUTHORIZED)
+    (asserts! (get active campaign) ERR-CAMPAIGN-ALREADY-PAUSED)
+    (map-set campaigns { campaign-id: campaign-id } (merge campaign { active: false }))
+    (ok true)
+  )
+)
+
+;; Resume a paused campaign (merchant only, requires balance >= floor)
+(define-public (resume-campaign (campaign-id uint))
+  (let ((campaign (unwrap! (map-get? campaigns { campaign-id: campaign-id }) ERR-CAMPAIGN-NOT-FOUND)))
+    (asserts! (is-eq tx-sender (get merchant campaign)) ERR-NOT-AUTHORIZED)
+    (asserts! (not (get active campaign)) ERR-CAMPAIGN-ALREADY-ACTIVE)
+    (asserts! (>= (get escrow-balance campaign) (get escrow-floor campaign)) ERR-ESCROW-BELOW-FLOOR)
+    (map-set campaigns { campaign-id: campaign-id } (merge campaign { active: true }))
+    (ok true)
+  )
+)
+
 ;; Deduct payout from escrow - called only by payout contract
 (define-public (deduct-escrow (campaign-id uint) (amount uint))
   (let ((campaign (unwrap! (map-get? campaigns { campaign-id: campaign-id }) ERR-CAMPAIGN-NOT-FOUND)))
     (asserts! (is-eq contract-caller .payout) ERR-NOT-AUTHORIZED)
     (asserts! (get active campaign) ERR-CAMPAIGN-PAUSED)
+    (asserts! (>= (get escrow-balance campaign) amount) ERR-INSUFFICIENT-BALANCE)
     (let ((new-balance (- (get escrow-balance campaign) amount)))
       (map-set campaigns
         { campaign-id: campaign-id }
