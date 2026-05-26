@@ -66,6 +66,20 @@ export async function createCampaign(commissionRate: number, escrowFloor: number
   });
 }
 
+export async function depositEscrow(campaignId: number, amount: number, tokenContract: string) {
+  await openContractCall({
+    network,
+    contractAddress: CONTRACT_DEPLOYER,
+    contractName: 'escrow',
+    functionName: 'deposit',
+    functionArgs: [uintCV(campaignId), uintCV(amount), principalCV(tokenContract)],
+    anchorMode: AnchorMode.Any,
+    postConditionMode: PostConditionMode.Allow,
+    onFinish: (data) => console.log('Deposited:', data.txId),
+    onCancel: () => {},
+  });
+}
+
 export async function setCommissionRate(campaignId: number, rate: number) {
   await openContractCall({
     network,
@@ -76,6 +90,34 @@ export async function setCommissionRate(campaignId: number, rate: number) {
     anchorMode: AnchorMode.Any,
     postConditionMode: PostConditionMode.Allow,
     onFinish: (data) => console.log('Rate updated:', data.txId),
+    onCancel: () => {},
+  });
+}
+
+export async function pauseCampaign(campaignId: number) {
+  await openContractCall({
+    network,
+    contractAddress: CONTRACT_DEPLOYER,
+    contractName: 'escrow',
+    functionName: 'pause-campaign',
+    functionArgs: [uintCV(campaignId)],
+    anchorMode: AnchorMode.Any,
+    postConditionMode: PostConditionMode.Allow,
+    onFinish: (data) => console.log('Campaign paused:', data.txId),
+    onCancel: () => {},
+  });
+}
+
+export async function resumeCampaign(campaignId: number) {
+  await openContractCall({
+    network,
+    contractAddress: CONTRACT_DEPLOYER,
+    contractName: 'escrow',
+    functionName: 'resume-campaign',
+    functionArgs: [uintCV(campaignId)],
+    anchorMode: AnchorMode.Any,
+    postConditionMode: PostConditionMode.Allow,
+    onFinish: (data) => console.log('Campaign resumed:', data.txId),
     onCancel: () => {},
   });
 }
