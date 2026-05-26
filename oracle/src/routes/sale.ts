@@ -23,7 +23,7 @@ saleRouter.post('/', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  if (isDuplicate(saleId)) {
+  if (await isDuplicate(saleId)) {
     return res.status(409).json({ error: 'Duplicate sale' });
   }
 
@@ -43,7 +43,7 @@ saleRouter.post('/', async (req: Request, res: Response) => {
     );
 
     const txid = await broadcastPayout(saleIdBuf, affiliate, campaignId, amount, attestationSig, tokenContract);
-    markProcessed(saleId);
+    await markProcessed(saleId);
     return res.json({ txid });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
