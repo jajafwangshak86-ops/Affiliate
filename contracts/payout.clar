@@ -14,11 +14,13 @@
 (define-constant ERR-CAMPAIGN-INACTIVE (err u303))
 (define-constant ERR-AFFILIATE-NOT-FOUND (err u304))
 (define-constant ERR-INSUFFICIENT-ESCROW (err u305))
+(define-constant ERR-AFFILIATE-INACTIVE (err u306))
 
 ;; ===== Data =====
 
-;; Authorized oracle public key (set at deploy time)
 (define-data-var oracle-pubkey (buff 33) 0x00)
+(define-data-var payout-count uint u0)
+(define-data-var total-paid-out uint u0)
 
 ;; ===== Read-Only =====
 
@@ -26,8 +28,15 @@
   (var-get oracle-pubkey)
 )
 
+(define-read-only (get-payout-stats)
+  (ok {
+    payout-count: (var-get payout-count),
+    total-paid-out: (var-get total-paid-out)
+  })
+)
+
 ;; Recover signer from a sale attestation
-;; Message: (sale-id | affiliate | campaign-id | amount)
+;; Message: sha256(sale-id | to-consensus-buff?(affiliate) | to-consensus-buff?(campaign-id) | to-consensus-buff?(amount))
 (define-read-only (recover-signer
     (sale-id (buff 32))
     (affiliate principal)
@@ -66,6 +75,11 @@
     ;; Prevent replay
     (asserts! (not (contract-call? .affiliate is-sale-processed sale-id)) ERR-DUPLICATE-SALE)
 
+    ;; Verify affiliate is registered and active
+    (let ((affiliate-data (unwrap! (contract-call? .affiliate get-affiliate affiliate) ERR-AFFILIATE-NOT-FOUND)))
+      (asserts! (get active affiliate-data) ERR-AFFILIATE-INACTIVE)
+    )
+
     ;; Verify oracle signature
     (let ((recovered (unwrap! (recover-signer sale-id affiliate campaign-id amount sig) ERR-INVALID-SIGNATURE)))
       (asserts! (is-eq recovered (var-get oracle-pubkey)) ERR-INVALID-SIGNATURE)
@@ -84,6 +98,10 @@
 
       ;; Transfer payout to affiliate
       (try! (as-contract (contract-call? token transfer amount tx-sender affiliate none)))
+
+      ;; Update global stats
+      (var-set payout-count (+ (var-get payout-count) u1))
+      (var-set total-paid-out (+ (var-get total-paid-out) amount))
 
       (ok true)
     )
