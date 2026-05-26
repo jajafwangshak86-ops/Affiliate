@@ -12,3 +12,15 @@ export async function markProcessed(saleId: string): Promise<void> {
   // TTL of 90 days — long enough to prevent replay, short enough to not grow unbounded
   await client.set(`sale:${saleId}`, '1', { EX: 60 * 60 * 24 * 90 });
 }
+
+export async function getProcessedCount(): Promise<number> {
+  let count = 0;
+  for await (const _ of client.scanIterator({ MATCH: 'sale:*', COUNT: 100 })) {
+    count++;
+  }
+  return count;
+}
+
+export async function closeConnection(): Promise<void> {
+  await client.quit();
+}
