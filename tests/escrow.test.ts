@@ -33,7 +33,7 @@ describe("escrow: get-campaign", () => {
 
   it("returns campaign data after creation", () => {
     const result = simnet.callReadOnlyFn("escrow", "get-campaign", [Cl.uint(1)], merchant);
-    expect(result.result).toBeSome();
+    expect(result.result.type).toBe("some");
   });
 
   it("returns none for non-existent campaign", () => {
