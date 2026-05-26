@@ -9,6 +9,7 @@
 (define-constant ERR-NOT-AUTHORIZED (err u202))
 (define-constant ERR-DUPLICATE-SALE (err u203))
 (define-constant ERR-INVALID-ASSET (err u204))
+(define-constant ERR-ALREADY-INACTIVE (err u205))
 
 ;; ===== Data =====
 
@@ -37,6 +38,20 @@
 
 (define-read-only (is-registered (affiliate principal))
   (is-some (map-get? affiliates { affiliate: affiliate }))
+)
+
+(define-read-only (get-conversion-count (affiliate principal))
+  (match (map-get? affiliates { affiliate: affiliate })
+    data (ok (get total-conversions data))
+    (err u201)
+  )
+)
+
+(define-read-only (get-total-earned (affiliate principal))
+  (match (map-get? affiliates { affiliate: affiliate })
+    data (ok (get total-earned data))
+    (err u201)
+  )
 )
 
 (define-read-only (get-sale (sale-id (buff 32)))
@@ -81,6 +96,18 @@
     (map-set affiliates
       { affiliate: tx-sender }
       (merge affiliate { payout-asset: payout-asset })
+    )
+    (ok true)
+  )
+)
+
+;; Deactivate own affiliate account
+(define-public (deactivate)
+  (let ((affiliate (unwrap! (map-get? affiliates { affiliate: tx-sender }) ERR-NOT-REGISTERED)))
+    (asserts! (get active affiliate) ERR-ALREADY-INACTIVE)
+    (map-set affiliates
+      { affiliate: tx-sender }
+      (merge affiliate { active: false })
     )
     (ok true)
   )
