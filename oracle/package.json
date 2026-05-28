@@ -1,13 +1,23 @@
 {
-  "name": "affiliate-oracle",
+  "name": "@stacks-affiliate/oracle",
   "version": "1.0.0",
-  "description": "Oracle service for verifying sale events and submitting attestations to Stacks",
+  "description": "Oracle service for the Stacks Bitcoin-settled affiliate network — verifies sale events and submits on-chain attestations",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "src", ".env.example"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jajafwangshak86-ops/Affiliate.git",
+    "directory": "oracle"
+  },
+  "keywords": ["stacks", "bitcoin", "affiliate", "oracle", "sbtc", "clarity", "web3"],
+  "license": "MIT",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node src/index.ts",
-    "test": "jest"
+    "test": "jest",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@stacks/network": "^6.13.0",

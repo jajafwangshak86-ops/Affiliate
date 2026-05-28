@@ -1,0 +1,27 @@
+{
+  "name": "@stacks-affiliate/sdk",
+  "version": "1.0.0",
+  "description": "JavaScript/TypeScript SDK for the Stacks Bitcoin-settled affiliate network",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "src"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jajafwangshak86-ops/Affiliate.git",
+    "directory": "sdk"
+  },
+  "keywords": ["stacks", "bitcoin", "affiliate", "sbtc", "clarity", "web3", "sdk"],
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@stacks/network": "^6.13.0",
+    "@stacks/transactions": "^6.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  }
+}
